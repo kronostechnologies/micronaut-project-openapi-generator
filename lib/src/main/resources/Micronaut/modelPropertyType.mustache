@@ -1,0 +1,1 @@
+{{#required}}{{#isNullable}}@{{type.Nullable}} {{/isNullable}}{{/required}}{{^required}}@{{type.Nullable}} {{/required}}{{#isNullable}}{{#jacksonDatabindNullable}}org.openapitools.jackson.nullable.JsonNullable<{{/jacksonDatabindNullable}}{{/isNullable}}{{{datatypeWithEnum}}}{{#isNullable}}{{#jacksonDatabindNullable}}>{{/jacksonDatabindNullable}}{{/isNullable}}
