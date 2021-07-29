@@ -15,7 +15,7 @@ import java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE
 import java.nio.file.attribute.PosixFilePermission.OTHERS_EXECUTE
 import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
 
-private const val gradleWrapperFolder = "gradle/wrapper"
+private const val GRADLE_WRAPPER_FOLDER = "gradle/wrapper"
 
 open class MicronautClientGenerator : MicronautCodegenOverrides(
     sourceFolders = OutputFolders("src/main"),
@@ -47,8 +47,8 @@ open class MicronautClientGenerator : MicronautCodegenOverrides(
 
         addProjectFile("gradlew", "gradlew")
         addProjectFile("gradlew.bat", "gradlew.bat")
-        addProjectFile("gradle-wrapper.properties", "gradle-wrapper.properties", gradleWrapperFolder)
-        addProjectFile("gradle-wrapper.jar", "gradle-wrapper.jar", gradleWrapperFolder)
+        addProjectFile("gradle-wrapper.properties", "gradle-wrapper.properties", GRADLE_WRAPPER_FOLDER)
+        addProjectFile("gradle-wrapper.jar", "gradle-wrapper.jar", GRADLE_WRAPPER_FOLDER)
 
         addSourceFile(invokerPackage, "Client")
         addSourceFile(invokerPackage, "NonNullApi")

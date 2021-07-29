@@ -101,7 +101,7 @@ package.sdk.micronaut: $(SDK_MICRONAUT_DIR)
 	@echo "Generating Micronaut SDK"
 	@${GRADLEW} generateMicronautSdk
 	@echo "Test Micronaut SDK"
-	@cd ${SDK_MICRONAUT_DIR} && ${GRADLEW} check assemble
+	@cd ${SDK_MICRONAUT_DIR} && ${GRADLEW} build
 	@echo "Kotlin SDK generated to: '${SDK_MICRONAUT_DIR}'"
 
 $(SDK_MICRONAUT_DIR): $(SDK_DIR)

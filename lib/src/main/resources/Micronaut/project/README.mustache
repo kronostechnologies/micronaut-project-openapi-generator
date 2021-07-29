@@ -27,7 +27,7 @@ Building the API client library requires:
 To install the API client library to your local Maven repository, simply execute:
 
 ```shell
-./gradlew check assemble
+./gradlew build
 ```
 
 ### Gradle users
@@ -76,7 +76,7 @@ Everything that applies to [HTTP clients](https://docs.micronaut.io/latest/guide
 To publish, configure your target repositories and simply run.
 
 ```shell
-./gradlew check assemble publish
+./gradlew build publish
 ```
 
 It is possible to create a `local.build.gradle.kts` and `local.settings.gradle.kts` files that will not be overridden by the generator. You can add your publication configs in those files.

@@ -1,16 +1,17 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+val javaVersion = JavaVersion.VERSION_13
+
 group = "com.equisoft.openapi.generator.micronaut"
-version = project.findProperty("application.version") ?: "0.0.0-SNAPSHOT"
 
 plugins {
     id("org.jetbrains.kotlin.jvm") version "1.5.21"
     id("net.linguica.maven-settings") version "0.5"
+    id("com.equisoft.standards.kotlin") version "0.5.0"
 
+    jacoco
     `java-library`
     `maven-publish`
-}
-
-repositories {
-    mavenCentral()
 }
 
 dependencies {
@@ -21,6 +22,15 @@ dependencies {
     implementation("org.openapitools:jackson-databind-nullable:0.2.1")
     implementation("io.kokuwa.micronaut:micronaut-openapi-codegen:2.1.8")
     implementation("io.micronaut:micronaut-core:2.5.11")
+}
+
+java {
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+}
+
+jacoco {
+    toolVersion = "0.8.6"
 }
 
 publishing {
@@ -58,5 +68,57 @@ publishing {
                 }
             }
         }
+    }
+}
+
+tasks {
+    check {
+        dependsOn(jacocoTestCoverageVerification)
+    }
+
+    test {
+        finalizedBy("jacocoTestReport")
+        useJUnitPlatform()
+    }
+
+    jacocoTestReport {
+        reports {
+            csv.required.set(false)
+            xml.required.set(true)
+            html.required.set(true)
+        }
+    }
+
+    withType<KotlinCompile> {
+        kotlinOptions {
+            jvmTarget = javaVersion.majorVersion
+            javaParameters = true
+            freeCompilerArgs = freeCompilerArgs + listOf(
+                "-Xopt-in=kotlin.contracts.ExperimentalContracts"
+            )
+        }
+    }
+
+    register("ci-classes") {
+        group = "ci"
+        dependsOn(testClasses)
+    }
+
+    register("ci-check") {
+        group = "ci"
+
+        dependsOn("ci-classes")
+
+        dependsOn(detekt)
+        dependsOn(lintKotlin)
+    }
+
+    register("ci-unit-tests") {
+        group = "ci"
+
+        dependsOn("ci-classes")
+
+        dependsOn(test)
+        dependsOn(jacocoTestCoverageVerification)
     }
 }
