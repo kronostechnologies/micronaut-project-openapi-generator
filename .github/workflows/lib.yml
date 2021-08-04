@@ -1,0 +1,418 @@
+name: Lib
+
+on:
+  pull_request: { }
+  push:
+    branches:
+      - master
+    tags:
+      - v*.*.*
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.metadata.outputs.is_release }}
+      publishable: ${{ steps.metadata.outputs.publishable }}
+      version: ${{ steps.metadata.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # Setup asdf-vm
+      - name: Install asdf-vm
+        uses: asdf-vm/actions/setup@v1.1.0
+
+      - name: Cache asdf tooling
+        uses: actions/cache@v2.1.6
+        with:
+          key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
+          restore-keys: asdf-${{ runner.os }}-
+          path: |
+            ${ASDF_DIR}/installs
+            ${ASDF_DIR}/plugins
+
+      - name: Install asdf-vm tools
+        uses: asdf-vm/actions/install@v1.1.0
+
+      - name: Switch to the asdf-provided version of java
+        run: |
+          echo "JAVA_HOME=$(dirname "$(dirname "$(realpath "$(asdf which java)")")")" >> $GITHUB_ENV;
+
+      - name: Find latest released version
+        id: latest_version
+        uses: oprypin/find-latest-tag@v1
+        continue-on-error: true
+        with:
+          repository: ${{ github.repository }}
+          releases-only: false
+          prefix: v
+          regex: '^v\d+\.\d+\.\d+$'
+          sort-tags: true
+
+      - name: Determine application metadata
+        id: metadata
+        run: |
+          IS_RELEASE=false
+          PUBLISHABLE=false
+          VERSION=0.0.0-SNAPSHOT
+          DEFAULT_BRANCH=${{ github.event.repository.default_branch }}
+
+          LATEST_VERSION=${{ steps.latest_version.outputs.tag }}
+          LATEST_VERSION=${LATEST_VERSION#v}
+          LATEST_VERSION=${LATEST_VERSION:-0.0.0}
+
+          if [[ "$DEFAULT_BRANCH" == "" ]]; then
+            # Schedule triggers have no `github.event` contexts
+            DEFAULT_BRANCH="${GITHUB_REF#refs/heads/}"
+          fi
+
+          if [[ $GITHUB_REF =~ refs/tags/v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            PUBLISHABLE=$(git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH" && echo "true" || echo "false")
+            IS_RELEASE="$PUBLISHABLE"
+          elif [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=$(echo ${GITHUB_REF#refs/tags/} | sed -r 's#/+#-#g')
+          elif [[ $GITHUB_REF == refs/heads/* ]]; then
+            BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed -r 's#/+#-#g')
+            if [ "$DEFAULT_BRANCH" = "$BRANCH" ]; then
+              VERSION=${LATEST_VERSION%.*}.$((${LATEST_VERSION##*.} + 1))-SNAPSHOT
+              PUBLISHABLE=true
+            else
+              VERSION=branch-$BRANCH
+            fi
+          elif [[ $GITHUB_REF == refs/pull/* ]]; then
+            VERSION=pr-${{ github.event.number }}
+          fi
+
+          echo ::set-output name=is_release::$IS_RELEASE
+          echo ::set-output name=publishable::$PUBLISHABLE
+          echo ::set-output name=version::$VERSION
+
+  compile:
+    name: Compile
+    runs-on: ubuntu-latest
+    needs: [setup]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup asdf-vm
+      - name: Install asdf-vm
+        uses: asdf-vm/actions/setup@v1.1.0
+
+      - name: Cache asdf tooling
+        uses: actions/cache@v2.1.6
+        with:
+          key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
+          restore-keys: asdf-${{ runner.os }}-
+          path: |
+            ${ASDF_DIR}/installs
+            ${ASDF_DIR}/plugins
+
+      - name: Install asdf-vm tools
+        uses: asdf-vm/actions/install@v1.1.0
+
+      - name: Switch to the asdf-provided version of java
+        run: |
+          echo "JAVA_HOME=$(dirname "$(dirname "$(realpath "$(asdf which java)")")")" >> $GITHUB_ENV;
+
+      # Compile
+      - name: Compile source and test code
+        uses: burrunan/gradle-cache-action@v1.10
+        with:
+          gradle-version: wrapper
+          arguments: ":lib:ci-classes"
+          properties: |
+            application.version=${{ needs.setup.outputs.version }}
+            gpr.user=${{ secrets.GHCR_USER }}
+            gpr.key=${{ secrets.GHCR_TOKEN }}
+
+  static_analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    needs: [setup, compile]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup asdf-vm
+      - name: Install asdf-vm
+        uses: asdf-vm/actions/setup@v1.1.0
+
+      - name: Cache asdf tooling
+        uses: actions/cache@v2.1.6
+        with:
+          key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
+          restore-keys: asdf-${{ runner.os }}-
+          path: |
+            ${ASDF_DIR}/installs
+            ${ASDF_DIR}/plugins
+
+      - name: Install asdf-vm tools
+        uses: asdf-vm/actions/install@v1.1.0
+
+      - name: Switch to the asdf-provided version of java
+        run: |
+          echo "JAVA_HOME=$(dirname "$(dirname "$(realpath "$(asdf which java)")")")" >> $GITHUB_ENV;
+
+      # Checks
+      - name: Run static check analysis
+        uses: burrunan/gradle-cache-action@v1.10
+        with:
+          gradle-version: wrapper
+          arguments: ":lib:ci-check"
+          properties: |
+            application.version=${{ needs.setup.outputs.version }}
+            gpr.user=${{ secrets.GHCR_USER }}
+            gpr.key=${{ secrets.GHCR_TOKEN }}
+
+      - name: Upload results
+        uses: actions/upload-artifact@v2
+        if: ${{ success() || failure() }}
+        with:
+          name: static-check-reports
+          path: |
+            lib/build/reports/detekt
+            lib/build/reports/ktlint
+          retention-days: 5
+
+  unit_tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    needs: [setup, compile]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup asdf-vm
+      - name: Install asdf-vm
+        uses: asdf-vm/actions/setup@v1.1.0
+
+      - name: Cache asdf tooling
+        uses: actions/cache@v2.1.6
+        with:
+          key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
+          restore-keys: asdf-${{ runner.os }}-
+          path: |
+            ${ASDF_DIR}/installs
+            ${ASDF_DIR}/plugins
+
+      - name: Install asdf-vm tools
+        uses: asdf-vm/actions/install@v1.1.0
+
+      - name: Switch to the asdf-provided version of java
+        run: |
+          echo "JAVA_HOME=$(dirname "$(dirname "$(realpath "$(asdf which java)")")")" >> $GITHUB_ENV;
+
+      # Unit tests
+      - name: Run unit tests
+        uses: burrunan/gradle-cache-action@v1.10
+        with:
+          gradle-version: wrapper
+          arguments: ":lib:ci-unit-tests"
+          properties: |
+            application.version=${{ needs.setup.outputs.version }}
+            gpr.user=${{ secrets.GHCR_USER }}
+            gpr.key=${{ secrets.GHCR_TOKEN }}
+
+      - name: Upload unit tests results
+        uses: actions/upload-artifact@v2
+        if: ${{ success() || failure() }}
+        with:
+          name: unit-test-results
+          path: |
+            lib/build/test-results/test
+            !lib/build/test-results/test/binary
+          retention-days: 5
+
+      - name: Upload unit tests report
+        uses: actions/upload-artifact@v2
+        if: ${{ success() || failure() }}
+        with:
+          name: unit-tests-reports
+          path: lib/build/reports/tests/test/
+          retention-days: 5
+
+      - name: Upload Code Coverage Result
+        uses: actions/upload-artifact@v2
+        if: ${{ success() || failure() }}
+        with:
+          name: kotlin-test-coverage.jacoco.xml
+          path: lib/build/reports/jacoco/test/jacocoTestReport.xml
+          retention-days: 5
+
+      - name: Create annotations
+        uses: mikepenz/action-junit-report@v2.4.3
+        if: ${{ always() && github.actor != 'dependabot[bot]' }}
+        with:
+          check_name: Unit Tests Report
+          report_paths: lib/build/test-results/test/TEST-*.xml
+
+  distribution_binary:
+    name: Distribution binary
+    runs-on: ubuntu-latest
+    needs: [setup, compile]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup asdf-vm
+      - name: Install asdf-vm
+        uses: asdf-vm/actions/setup@v1.1.0
+
+      - name: Cache asdf tooling
+        uses: actions/cache@v2.1.6
+        with:
+          key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
+          restore-keys: asdf-${{ runner.os }}-
+          path: |
+            ${ASDF_DIR}/installs
+            ${ASDF_DIR}/plugins
+
+      - name: Install asdf-vm tools
+        uses: asdf-vm/actions/install@v1.1.0
+
+      - name: Switch to the asdf-provided version of java
+        run: |
+          echo "JAVA_HOME=$(dirname "$(dirname "$(realpath "$(asdf which java)")")")" >> $GITHUB_ENV;
+
+      # Assemble
+      - name: Assemble JAR
+        uses: burrunan/gradle-cache-action@v1.10
+        with:
+          gradle-version: wrapper
+          arguments: ":lib:assemble"
+          properties: |
+            application.version=${{ needs.setup.outputs.version }}
+            gpr.user=${{ secrets.GHCR_USER }}
+            gpr.key=${{ secrets.GHCR_TOKEN }}
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v2
+        if: ${{ success() }}
+        with:
+          name: openapi-generator-micronaut-project-${{ needs.setup.outputs.version }}.jar
+          path: lib/build/libs/lib-${{ needs.setup.outputs.version }}.jar
+          retention-days: 5
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs: [setup, static_analysis, unit_tests, distribution_binary]
+    if: ${{ needs.setup.outputs.publishable == 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download JAR
+        uses: actions/download-artifact@v2
+        with:
+          name: openapi-generator-micronaut-project-${{ needs.setup.outputs.version }}.jar
+          path: lib/build/libs/lib-${{ needs.setup.outputs.version }}.jar
+
+      # Setup asdf-vm
+      - name: Install asdf-vm
+        uses: asdf-vm/actions/setup@v1.1.0
+
+      - name: Cache asdf tooling
+        uses: actions/cache@v2.1.6
+        with:
+          key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
+          restore-keys: asdf-${{ runner.os }}-
+          path: |
+            ${ASDF_DIR}/installs
+            ${ASDF_DIR}/plugins
+
+      - name: Install asdf-vm tools
+        uses: asdf-vm/actions/install@v1.1.0
+
+      - name: Switch to the asdf-provided version of java
+        run: |
+          echo "JAVA_HOME=$(dirname "$(dirname "$(realpath "$(asdf which java)")")")" >> $GITHUB_ENV;
+
+      # Publish
+      - name: Publish artifacts to GPR
+        uses: burrunan/gradle-cache-action@v1.10
+        with:
+          gradle-version: wrapper
+          arguments: ":lib:publish"
+          properties: |
+            application.version=${{ needs.setup.outputs.version }}
+            gpr.user=${{ secrets.GHCR_USER }}
+            gpr.key=${{ secrets.GHCR_TOKEN }}
+
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [setup, compile, static_analysis, unit_tests, distribution_binary, publish]
+    if: failure() && needs.setup.outputs.publishable == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Find workflow status
+        id: workflow
+        run: |
+          STATUS=success
+          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            STATUS=cancelled
+          elif [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            STATUS=failure
+          fi
+
+          echo ::set-output name=status::$STATUS
+
+      - name: Post status to Slack
+        uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.OPS_CI_WEBHOOK_URL }}
+        with:
+          author_name: CI Results
+          fields: repo,commit,author,ref,workflow,message
+          status: custom
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ steps.workflow.outputs.status }}' === 'success' ? 'good' : '${{ steps.workflow.outputs.status }}' === 'failure' ? 'danger' : '#999999',
+                text: `${process.env.AS_WORKFLOW} workflow ${{ steps.workflow.outputs.status }}!`,
+                fields: [
+                  {
+                    title: 'Repo',
+                    value: `${process.env.AS_REPO}`,
+                    short: true
+                  },
+                  {
+                    title: 'Author',
+                    value: `${process.env.AS_AUTHOR}`,
+                    short: true
+                  },
+                  {
+                    title: 'Ref',
+                    value: `${process.env.AS_REF}`,
+                    short: true
+                  },
+                  {
+                    title: 'Commit',
+                    value: `${process.env.AS_COMMIT}`,
+                    short: true
+                  },
+                  {
+                    title: 'Description',
+                    value: `${process.env.AS_MESSAGE}`,
+                    short: false
+                  }
+                ]
+              }]
+            }
