@@ -13,6 +13,7 @@ data class OutputFolders(
     val source: String = "$project/java",
 )
 
+@Suppress("VariableNaming")
 open class MicronautCodegenOverrides(
     protected val sourceFolders: OutputFolders,
     protected val testFolders: OutputFolders
@@ -43,6 +44,7 @@ open class MicronautCodegenOverrides(
         super.addSupportingFile(projectFolder, packageString, file)
     }
 
+    @Suppress("UnsafeCallOnNullableType", "ReturnCount")
     override fun getSchemaType(schema: Schema<Any>): String? {
         val format = schema.format
         if (schema is StringSchema && format != null && CUSTOM_FORMATS.containsKey(format)) {
@@ -51,23 +53,29 @@ open class MicronautCodegenOverrides(
             return type
         }
         if (schema is ComposedSchema) {
-            if (CollectionUtils.isNotEmpty(schema.oneOf as Collection<*>?)) {
-                if(schema.nullable && schema.oneOf.count() == 1) {
-                    val inner: Schema<Any>? = schema.oneOf
-                        .stream()
-                        .filter {
-                                subSchema -> !ModelUtils.isNullType(subSchema)
-                        }
-                        .findFirst()
-                        .orElse(null)
-                    if(inner != null) {
-                        return super.getSchemaType(inner)
-                    }
-                }
+            return getComposedSchematype(schema)
+        }
+        return super.getSchemaType(schema)
+    }
 
-                // ignore embedded oneOf schemas
-                return Any::class.java.name
+    @Suppress("ReturnCount")
+    private fun getComposedSchematype(schema: ComposedSchema): String? {
+        if (CollectionUtils.isNotEmpty(schema.oneOf as Collection<*>?)) {
+            if (schema.nullable && schema.oneOf.count() == 1) {
+                val inner: Schema<Any>? = schema.oneOf
+                    .stream()
+                    .filter { subSchema ->
+                        !ModelUtils.isNullType(subSchema)
+                    }
+                    .findFirst()
+                    .orElse(null)
+                if (inner != null) {
+                    return super.getSchemaType(inner)
+                }
             }
+
+            // ignore embedded oneOf schemas
+            return Any::class.java.name
         }
         return super.getSchemaType(schema)
     }
