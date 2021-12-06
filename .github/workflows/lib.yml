@@ -250,7 +250,7 @@ jobs:
           retention-days: 5
 
       - name: Create annotations
-        uses: mikepenz/action-junit-report@v2.4.3
+        uses: mikepenz/action-junit-report@v2.8.1
         if: ${{ always() && github.actor != 'dependabot[bot]' }}
         with:
           check_name: Unit Tests Report
