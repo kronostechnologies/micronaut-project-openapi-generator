@@ -40,8 +40,8 @@ publishing {
             url = uri("https://maven.pkg.github.com/kronostechnologies/micronaut-project-openapi-generator")
             credentials {
                 name = "gprWrite"
-                username = project.findProperty("gpr.user")?.toString() ?: System.getenv("GHCR_USER")
-                password = project.findProperty("gpr.key")?.toString() ?: System.getenv("GHCR_TOKEN")
+                username = project.findProperty("gpr.write.user")?.toString() ?: System.getenv("GPR_USER")
+                password = project.findProperty("gpr.write.key")?.toString() ?: System.getenv("GPR_KEY")
             }
         }
     }
