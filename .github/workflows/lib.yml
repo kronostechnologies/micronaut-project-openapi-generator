@@ -28,7 +28,7 @@ jobs:
         uses: asdf-vm/actions/setup@v1.1.0
 
       - name: Cache asdf tooling
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
           restore-keys: asdf-${{ runner.os }}-
@@ -107,7 +107,7 @@ jobs:
         uses: asdf-vm/actions/setup@v1.1.0
 
       - name: Cache asdf tooling
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
           restore-keys: asdf-${{ runner.os }}-
@@ -147,7 +147,7 @@ jobs:
         uses: asdf-vm/actions/setup@v1.1.0
 
       - name: Cache asdf tooling
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
           restore-keys: asdf-${{ runner.os }}-
@@ -197,7 +197,7 @@ jobs:
         uses: asdf-vm/actions/setup@v1.1.0
 
       - name: Cache asdf tooling
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
           restore-keys: asdf-${{ runner.os }}-
@@ -270,7 +270,7 @@ jobs:
         uses: asdf-vm/actions/setup@v1.1.0
 
       - name: Cache asdf tooling
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
           restore-keys: asdf-${{ runner.os }}-
@@ -326,7 +326,7 @@ jobs:
         uses: asdf-vm/actions/setup@v1.1.0
 
       - name: Cache asdf tooling
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           key: asdf-${{ runner.os }}-${{ hashFiles('.tool-versions') }}
           restore-keys: asdf-${{ runner.os }}-
