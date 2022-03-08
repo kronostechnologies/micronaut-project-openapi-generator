@@ -73,7 +73,7 @@ open class MicronautClientGenerator : MicronautCodegenOverrides(
 
         addProjectFile("gradlew", "gradlew")
         addProjectFile("gradlew.bat", "gradlew.bat")
-        addProjectFile("gradle-wrapper.properties", "gradle-wrapper.properties", GRADLE_WRAPPER_FOLDER)
+        addProjectFile("gradle-wrapper.properties.mustache", "gradle-wrapper.properties", GRADLE_WRAPPER_FOLDER)
         addProjectFile("gradle-wrapper.jar", "gradle-wrapper.jar", GRADLE_WRAPPER_FOLDER)
 
         addSourceFile(invokerPackage, "Client")
