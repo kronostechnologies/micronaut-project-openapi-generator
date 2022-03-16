@@ -17,10 +17,8 @@ allprojects {
             credentials {
                 username = project.findProperty("gpr.user")?.toString()
                     ?: System.getenv("GPR_USER")
-                    ?: System.getenv("GHCR_USER")
                 password = project.findProperty("gpr.key")?.toString()
                     ?: System.getenv("GPR_TOKEN")
-                    ?: System.getenv("GHCR_TOKEN")
             }
         }
     }
