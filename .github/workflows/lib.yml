@@ -174,7 +174,7 @@ jobs:
             gpr.key=${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ success() || failure() }}
         with:
           name: static-check-reports
@@ -224,7 +224,7 @@ jobs:
             gpr.key=${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload unit tests results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ success() || failure() }}
         with:
           name: unit-test-results
@@ -234,7 +234,7 @@ jobs:
           retention-days: 5
 
       - name: Upload unit tests report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ success() || failure() }}
         with:
           name: unit-tests-reports
@@ -242,7 +242,7 @@ jobs:
           retention-days: 5
 
       - name: Upload Code Coverage Result
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ success() || failure() }}
         with:
           name: kotlin-test-coverage.jacoco.xml
@@ -297,7 +297,7 @@ jobs:
             gpr.key=${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload JAR
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ success() }}
         with:
           name: openapi-generator-micronaut-project-${{ needs.setup.outputs.version }}.jar
