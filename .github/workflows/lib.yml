@@ -322,7 +322,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Download JAR
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: openapi-generator-micronaut-project-${{ needs.setup.outputs.version }}.jar
           path: lib/build/libs/lib-${{ needs.setup.outputs.version }}.jar
