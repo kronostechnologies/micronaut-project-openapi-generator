@@ -124,7 +124,7 @@ jobs:
 
       # Compile
       - name: Compile source and test code
-        uses: burrunan/gradle-cache-action@v1.10
+        uses: burrunan/gradle-cache-action@v1.11
         with:
           gradle-version: wrapper
           arguments: ":lib:ci-classes"
@@ -164,7 +164,7 @@ jobs:
 
       # Checks
       - name: Run static check analysis
-        uses: burrunan/gradle-cache-action@v1.10
+        uses: burrunan/gradle-cache-action@v1.11
         with:
           gradle-version: wrapper
           arguments: ":lib:ci-check"
@@ -214,7 +214,7 @@ jobs:
 
       # Unit tests
       - name: Run unit tests
-        uses: burrunan/gradle-cache-action@v1.10
+        uses: burrunan/gradle-cache-action@v1.11
         with:
           gradle-version: wrapper
           arguments: ":lib:ci-unit-tests"
@@ -287,7 +287,7 @@ jobs:
 
       # Assemble
       - name: Assemble JAR
-        uses: burrunan/gradle-cache-action@v1.10
+        uses: burrunan/gradle-cache-action@v1.11
         with:
           gradle-version: wrapper
           arguments: ":lib:assemble"
@@ -349,7 +349,7 @@ jobs:
 
       # Publish
       - name: Publish artifacts to GPR
-        uses: burrunan/gradle-cache-action@v1.10
+        uses: burrunan/gradle-cache-action@v1.11
         with:
           gradle-version: wrapper
           arguments: ":lib:publish"
